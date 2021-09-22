@@ -1,9 +1,26 @@
 import csv
+import pandas as pd
 import datetime
 import json
 import os
+import plotly.express as px
+import plotly.graph_objs as go
 
-target_date = '2021-05-03'
+target_date = '2021-05-05'
+files = os.listdir(target_date)
+
+target_symbols = ['1303',
+                  '1314',
+                  '1718',
+                  '2002',
+                  '2603',
+                  '2606',
+                  '2618',
+                  '3019',
+                  '3035',
+                  '6414',
+                  '6488',
+                  '8046', ]
 
 
 class Product:
@@ -29,8 +46,25 @@ class Product:
         self.dict_delta = {}
         self.last_delta = -999
 
+
+        self.file_csv = f'{target_date}/delta-{self.stock_symbol}-{self.future_symbol}.csv'
+        self.file_html = f'{target_date}/delta-{self.stock_symbol}-{self.future_symbol}.html'
+
         with open(f'{target_date}/delta-{self.stock_symbol}-{self.future_symbol}.csv', 'w') as f:
-            f.write('timestamp,delta\n')
+            f.write('timestamp,delta,cover\n')
+
+
+    def to_html(self):
+
+        df = pd.read_csv(self.file_csv)
+
+        if len(df) < 100:
+            return
+
+        fig = px.line(df, x='timestamp', y=['delta', 'cover'])
+
+        fig.write_html(self.file_html)
+
 
     # 股票報價：
     # MKT/idcdmzpcr01/TSE/3016
@@ -58,8 +92,6 @@ class Product:
         if 'Time' not in quote.keys() or 'Date' not in quote.keys():
             return
 
-
-
         # 股票報價
         if topic.startswith('QUT'):
             self.StockAskPrice = quote['AskPrice'][0]
@@ -78,33 +110,30 @@ class Product:
         if quote['Time'] < '09:00' or quote['Time'] > '13:25':
             return
 
+
         if self.StockAskPrice == 0 or self.StockBidPrice == 0 or self.FutureAskPrice == 0 or self.FutureBidPrice == 0:
             return
 
         delta = self.StockBidPrice - self.FutureAskPrice
 
+        delta_reverse = self.FutureBidPrice - self.StockAskPrice
+
+
 
         if delta != self.last_delta:
             self.last_delta = delta
             self.dict_delta[timestamp] = delta
-            with open(f'{target_date}/delta-{self.stock_symbol}-{self.future_symbol}.csv', 'a+') as f:
-                f.write(f'{timestamp},{delta}\n')
-
-
+            with open(self.file_csv, 'a+') as f:
+                f.write(f'{timestamp},{delta},{delta_reverse}\n')
 
         self.delta_max = delta if delta > self.delta_max else self.delta_max
         self.delta_min = delta if delta < self.delta_min else self.delta_min
-
-
-
 
     def feed_tick(self, line):
         timestamp, topic, quote = line.split('\t')
 
         quote = json.loads(quote)
         self.feed_tick_tuple(timestamp, topic, quote)
-
-
 
     @staticmethod
     def parse_date_time(self, date_string, time_string):
@@ -128,16 +157,13 @@ class Product:
 
 
 
-files = os.listdir(target_date)
-
-
 for file in files:
     if not file.startswith('combined'):
         continue
     # print(file)
     stock_symbol, future_symbol = file[9:-4].split('_')
 
-    if stock_symbol != '2606':
+    if stock_symbol not in target_symbols:
         continue
 
     print(f'{stock_symbol} {future_symbol}')
@@ -148,7 +174,6 @@ for file in files:
         for line in f.readlines():
             product.feed_tick(line=line)
 
-
     if product.StockAskPrice == 0:
         continue
 
@@ -156,3 +181,5 @@ for file in files:
     min_percentage = round(product.delta_min / product.StockAskPrice, 3)
 
     print(f'Max: {max_percentage} Min: {min_percentage}')
+
+    product.to_html()

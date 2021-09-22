@@ -103,8 +103,8 @@ def comb_stock_and_stock_future(index,
         return_products.append(product)
 
         source_files = [
-                        f'{target_date}/{target_date}_stockFuture1.txt',
-                        f'{target_date}/{target_date}_stockFuture2.txt',
+                        f'{target_date}/stockFuture1-{target_date}.txt',
+                        f'{target_date}/stockFuture2-{target_date}.txt',
                         f'{target_date}/stocks-{target_date}/{target_date}_list{stock_index_mapping[product.stock_symbol]}.txt'
                         ]
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
     stock_index_mapping = {}
 
-    target_date = '2021-05-03'
+    target_date = '2021-07-22'
 
     files = os.listdir('stocklist')
     for file in files:
