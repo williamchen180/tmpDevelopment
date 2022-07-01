@@ -1,18 +1,9 @@
 import os
-import traceback
-import sys
 import multiprocessing
-import queue
-import time
 from mypylib import *
-from mypylib.ti import *
 from mypylib.mvp import *
-from mypylib.shioaji_history_ticks import shioaji_history_ticks
-import pickle
-import copy
-from termcolor import cprint
-import glob
 import csv
+from decimal import Decimal
 
 bool_single_CPU = False
 
@@ -30,25 +21,63 @@ def load_all_files(source_dir='../shioaji_ticks'):
         for f in os.listdir(f'{source_dir}/{d}'):
             if not f.startswith('20'):
                 continue
-            full_path = f'{source_dir}/{d}/{f}'
+            full_path = f'{d} {source_dir}/{d}/{f}'
             all_files.append(full_path)
     return all_files
+
+
 
 
 def visit_a_stock(queue_in: multiprocessing.Queue,
                   queue_out: multiprocessing.Queue,
                   parameter_dict: dict,
                   process_id=0):
-    while True:
-        try:
-            file = queue_in.get(block=True, timeout=1)
+    with open(f'record_{process_id}.txt', 'w+') as fout:
+        while True:
+            try:
+                data = queue_in.get(block=True, timeout=1)
 
-            # print(file)
-            with open(file) as f:
-                # TODO Do something here
-                pass
-        except queue.Empty:
-            break
+                symbol, file = data.split(' ')
+
+                # print(file)
+                Highest = 0
+                Lowest = 99999999
+                Close = 0
+                with open(file) as fp:
+                    rows = csv.DictReader(fp)
+                    # tick_type
+                    # ask_volume
+                    # bid_volume
+                    # bid_price
+                    # close
+                    # volume
+                    # ask_price
+                    # ts
+                    for row in rows:
+                        Close = Decimal(row['close'])
+
+                        if Close > Highest:
+                            Highest = Close
+                            bool_highest = True
+                        else:
+                            bool_highest = False
+
+                        if Close < Lowest:
+                            Lowest = Close
+                            bool_lowest = True
+                        else:
+                            bool_lowest = False
+
+                        Date, Time = row['ts'].split(' ')
+                        if Time < '09:03':
+                            continue
+
+                        if bool_lowest or bool_highest:
+                            fout.write(f'{symbol} {row["ts"]} {"higher" if bool_highest else "lower" if bool_lowest else ""}\n')
+
+
+            except queue.Empty:
+                break
 
     queue_out.put(f'{process_id}')
 
