@@ -17,11 +17,15 @@ import csv
 bool_single_CPU = False
 
 
-def load_all_files(source_dir='../../shioaji_ticks'):
+def load_all_files(source_dir='../shioaji_ticks'):
     all_files = []
 
     for d in os.listdir(source_dir):
         if not os.path.isdir(f'{source_dir}/{d}'):
+            continue
+        if d[0] == '.':
+            continue
+        if not d[0] in '1234567890':
             continue
         for f in os.listdir(f'{source_dir}/{d}'):
             if not f.startswith('20'):
@@ -39,7 +43,7 @@ def visit_a_stock(queue_in: multiprocessing.Queue,
         try:
             file = queue_in.get(block=True, timeout=1)
 
-            print(file)
+            # print(file)
             with open(file) as f:
                 # TODO Do something here
                 pass
@@ -58,7 +62,7 @@ if __name__ == '__main__':
         queue_in = multiprocessing.Queue()
         queue_out = multiprocessing.Queue()
 
-        all_files = load_all_files(source_dir='../')
+        all_files = load_all_files(source_dir='../shioaji_ticks')
         print(f'There are {len(all_files)} files.')
         for file in all_files:
             queue_in.put(file)
